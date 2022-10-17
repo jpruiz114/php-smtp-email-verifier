@@ -1,0 +1,20 @@
+{
+  "name": "coco/email-verification",
+  "require": {
+
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^9.5"
+  },
+  "autoload": {
+    "psr-4": {
+      "Coco\\EmailVerification\\": "src/"
+    }
+  },
+  "authors": [
+    {
+      "name": "Jean-Paul Ruiz",
+      "email": "jpruiz114@gmail.com"
+    }
+  ]
+}
