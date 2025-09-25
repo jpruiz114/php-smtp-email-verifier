@@ -147,10 +147,14 @@ class EmailValidator {
         $recipientCodes = $this->getCodes($this->recipientResult);
         echo print_r($recipientCodes, true);
 
+        $isValid = false;
         if (sizeof($recipientCodes) == 1 && $recipientCodes[0] == self::SMTP_CODE_OKAY) {
-            return true;
+            $isValid = true;
         }
 
-        return false;
+        // Close the socket to prevent resource leak
+        fclose($socket);
+
+        return $isValid;
     }
 }
