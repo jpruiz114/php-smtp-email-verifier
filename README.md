@@ -48,7 +48,8 @@ use Coco\EmailVerification\Exceptions\InvalidEmailFormatException;
 use Coco\EmailVerification\Exceptions\DnsLookupException;
 use Coco\EmailVerification\Exceptions\SmtpConnectionException;
 
-$validator = new EmailValidator();
+// Create validator with custom timeout (optional)
+$validator = new EmailValidator(15); // 15 second timeout
 
 try {
     $email = "user@example.com";
@@ -101,15 +102,17 @@ try {
 }
 ```
 
-## Running Tests
+## Running the Demo
 
-The project includes test cases to verify functionality:
+The project includes a demonstration script to test functionality:
 
 ```bash
-php src/MxLookupTest.php
+php demo.php
 ```
 
-Run PHPUnit tests:
+This will test various email addresses and show the verification results, including expected failures for educational purposes.
+
+For PHPUnit tests (when available):
 
 ```bash
 vendor/bin/phpunit
@@ -170,35 +173,55 @@ The library recognizes standard SMTP response codes:
 - `550`: Non-existent email address
 - `550-5.1.1`: Bad destination mailbox address
 
-## Important Notes
+## Real-World Considerations
 
+### Network and Infrastructure
 - **Network Requirements**: This library requires network access to perform DNS lookups and SMTP connections
 - **Firewall Considerations**: Ensure outbound connections on port 25 are allowed
-- **Rate Limiting**: Some mail servers may rate limit or block verification attempts
-- **Production Use**: Consider implementing caching and retry logic for production environments
+- **Timeout Management**: Default timeout is 10 seconds, configurable between 5-30 seconds
+- **Connection Failures**: Some mail servers may be slow, unresponsive, or temporarily unavailable
+
+### Mail Server Limitations
+- **Rate Limiting**: Many mail servers rate limit or block verification attempts
+- **Blocking Policies**: Some servers explicitly block SMTP verification to prevent abuse
+- **False Negatives**: Valid emails may show as invalid due to server policies
+- **Provider Restrictions**: Major providers (Gmail, Outlook) often restrict verification
+- **Microsoft/Outlook/Hotmail**: Microsoft aggressively blocks verification attempts with error code `550 5.7.1` and refers to their block list policy. Valid Microsoft emails will often show as invalid due to network-level blocking, not because the email doesn't exist.
+
+### Production Recommendations
+- **Caching**: Implement result caching to avoid repeated verification attempts
+- **Retry Logic**: Add exponential backoff for failed verifications
+- **Batch Processing**: Process email verifications in batches with delays
+- **Fallback Strategy**: Have alternative validation methods for blocked domains
+- **Monitoring**: Monitor success rates and adjust timeouts accordingly
+
+### Technical Standards
 - **Standards Compliance**: The library strictly adheres to [RFC 5321](https://tools.ietf.org/html/rfc5321) SMTP protocol standards
 - **Error Handling**: Comprehensive exception handling provides detailed error information for debugging
+- **Resource Management**: Proper socket cleanup prevents resource leaks
 
 ## Project Structure
 
 ```
-src/
-├── EmailValidator.php          # Main validation class
-├── MxLookup.php               # DNS MX record lookup
-├── MxLookupTest.php           # Test cases
-├── DNS/
-│   ├── Records/
-│   │   └── MxRecord.php       # MX record data structure
-│   └── Constants/
-│       ├── Attributes.php     # DNS record attributes
-│       ├── MxAttributes.php   # MX-specific attributes
-│       └── RecordTypes.php    # DNS record types
-└── Exceptions/
-    ├── EmailValidationException.php        # Base exception
-    ├── InvalidEmailFormatException.php     # Invalid email format
-    ├── InvalidDomainException.php          # Invalid domain
-    ├── DnsLookupException.php              # DNS lookup failures
-    └── SmtpConnectionException.php         # SMTP connection failures
+├── demo.php                              # Demonstration script
+├── composer.json                         # Composer configuration
+├── composer.lock                         # Composer lock file
+└── src/
+    ├── EmailValidator.php                # Main validation class
+    ├── MxLookup.php                     # DNS MX record lookup
+    ├── DNS/
+    │   ├── Records/
+    │   │   └── MxRecord.php             # MX record data structure
+    │   └── Constants/
+    │       ├── Attributes.php           # DNS record attributes
+    │       ├── MxAttributes.php         # MX-specific attributes
+    │       └── RecordTypes.php          # DNS record types
+    └── Exceptions/
+        ├── EmailValidationException.php        # Base exception
+        ├── InvalidEmailFormatException.php     # Invalid email format
+        ├── InvalidDomainException.php          # Invalid domain
+        ├── DnsLookupException.php              # DNS lookup failures
+        └── SmtpConnectionException.php         # SMTP connection failures
 ```
 
 ## Author
