@@ -156,6 +156,49 @@ try {
 
 The library follows [RFC 5321](https://tools.ietf.org/html/rfc5321) SMTP standards for all email verification operations:
 
+### SMTP Verification Sequence
+
+```mermaid
+sequenceDiagram
+    participant C as EmailValidator
+    participant S as SMTP Server
+    
+    Note over C,S: 1. Connection Establishment
+    C->>S: TCP Connection to port 25
+    S->>C: 220 Server ready
+    
+    Note over C,S: 2. EHLO Handshake  
+    C->>S: EHLO domain.com
+    S->>C: 250-Server capabilities<br/>250-SIZE<br/>250-PIPELINING<br/>250 ENHANCEDSTATUSCODES
+    
+    Note over C,S: 3. Sender Verification
+    C->>S: MAIL FROM:<test@domain.com>
+    alt Server accepts sender
+        S->>C: 250 Sender OK
+    else Server rejects sender
+        S->>C: 550 Sender rejected
+        Note over C: Verification fails
+    end
+    
+    Note over C,S: 4. Recipient Verification
+    C->>S: RCPT TO:<user@target.com>
+    alt Email exists and deliverable
+        S->>C: 250 Recipient OK
+        Note over C: ✅ Email VALID
+    else Email doesn't exist
+        S->>C: 550 User unknown
+        Note over C: ❌ Email INVALID
+    else Server blocks verification
+        S->>C: 550 5.7.1 Blocked (Microsoft)
+        Note over C: ⚠️ Verification blocked
+    end
+    
+    Note over C,S: 5. Clean Termination
+    C->>S: QUIT
+    S->>C: 221 Goodbye
+    Note over C,S: Connection closed
+```
+
 ### SMTP Commands Used
 - **EHLO**: Extended SMTP greeting to identify the client
 - **MAIL FROM**: Specifies the sender's email address
