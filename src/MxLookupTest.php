@@ -55,19 +55,22 @@ function send_command(&$socket, $command) {
     echo PHP_EOL;
 }
 
-$command = sprintf("EHLO %s\n", $mxLookup->getDomain());
+$command = sprintf("EHLO %s\r\n", $mxLookup->getDomain());
 send_command($socket, $command);
 
-$command = "MAIL FROM:<jpruiz114@gmail.com>\n";
+$command = "MAIL FROM:<jpruiz114@gmail.com>\r\n";
 send_command($socket, $command);
 
-$command = "RCPT TO:<jpruiz114@gmail.com>\n";
+$command = "RCPT TO:<jpruiz114@gmail.com>\r\n";
 send_command($socket, $command);
 
-$command = "MAIL FROM:<superawesomeguy1492@gmail.com>\n";
+$command = "MAIL FROM:<superawesomeguy1492@gmail.com>\r\n";
 send_command($socket, $command);
 
-$command = "RCPT TO:<superawesomeguy1492@gmail.com>\n";
+$command = "RCPT TO:<superawesomeguy1492@gmail.com>\r\n";
+send_command($socket, $command);
+
+$command = "QUIT\r\n";
 send_command($socket, $command);*/
 
 $NS=array('8.8.8.8');

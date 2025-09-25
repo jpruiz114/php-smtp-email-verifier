@@ -154,6 +154,9 @@ class EmailValidator {
         } finally {
             // Ensure socket is always closed, even if an exception occurs
             if (is_resource($socket)) {
+                // Send QUIT command to properly close SMTP session per RFC 5321
+                $quitCommand = "QUIT\r\n";
+                $this->sendCommand($socket, $quitCommand);
                 fclose($socket);
             }
         }
