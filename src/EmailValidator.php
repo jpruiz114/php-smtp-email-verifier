@@ -2,6 +2,10 @@
 
 namespace Coco\EmailVerification;
 
+use Coco\EmailVerification\Exceptions\InvalidEmailFormatException;
+use Coco\EmailVerification\Exceptions\DnsLookupException;
+use Coco\EmailVerification\Exceptions\SmtpConnectionException;
+
 class EmailValidator {
     public const SMTP_PORT = 25;
 
@@ -93,6 +97,9 @@ class EmailValidator {
     /**
      * @param string $emailAddress
      * @return bool
+     * @throws InvalidEmailFormatException
+     * @throws DnsLookupException
+     * @throws SmtpConnectionException
      */
     public function verifyEmailAddress(string $emailAddress): bool {
         $this->connectionResult = [];
@@ -100,61 +107,55 @@ class EmailValidator {
         $this->mailFromResult = [];
         $this->recipientResult = [];
 
-        if (filter_var($emailAddress, FILTER_VALIDATE_EMAIL)) {
-            $parts = explode("@", $emailAddress);
-            $domain = $parts[1];
-        }
-        else {
-            return false;
+        if (!filter_var($emailAddress, FILTER_VALIDATE_EMAIL)) {
+            throw new InvalidEmailFormatException($emailAddress);
         }
 
-        $mxLookup = new MxLookup($domain);
+        $parts = explode("@", $emailAddress);
+        $domain = $parts[1];
 
-        $highestPriorityRecord = $mxLookup->getRecordWithHighestPriority();
-        echo print_r($highestPriorityRecord, true);
+        try {
+            $mxLookup = new MxLookup($domain);
+            $highestPriorityRecord = $mxLookup->getRecordWithHighestPriority();
+        } catch (DnsLookupException $e) {
+            throw $e;
+        }
 
-        if (empty($highestPriorityRecord)) {
-            echo sprintf(
-                'Cannot find highest priority record for the domain %s' . PHP_EOL, $domain
-            );
-
-            return false;
+        try {
+            $targetIp = $highestPriorityRecord->getTargetIp();
+        } catch (DnsLookupException $e) {
+            throw $e;
         }
 
         /** @var resource|false $socket */
-        $socket = fsockopen(
-            $highestPriorityRecord->getTargetIp(), self::SMTP_PORT, $error_code, $error_message, 5
-        );
+        $socket = fsockopen($targetIp, self::SMTP_PORT, $error_code, $error_message, 5);
 
-        if (!empty($error_code)) {
-            return false;
+        if ($socket === false || !empty($error_code)) {
+            throw new SmtpConnectionException($targetIp, self::SMTP_PORT, $error_message, $error_code);
         }
 
-        $this->connectionResult[] = fgets($socket, 1024) . PHP_EOL;
-        echo print_r($this->connectionResult, true);
+        try {
+            $this->connectionResult[] = fgets($socket, 1024);
 
-        $command = sprintf("EHLO %s\r\n", $mxLookup->getDomain());
-        $this->ehloResult = $this->sendCommand($socket, $command);
-        echo print_r($this->ehloResult, true);
+            $command = sprintf("EHLO %s\r\n", $mxLookup->getDomain());
+            $this->ehloResult = $this->sendCommand($socket, $command);
 
-        $command = sprintf("MAIL FROM:<%s>\r\n", $emailAddress);
-        $this->mailFromResult = $this->sendCommand($socket, $command);
-        $mailFromCodes = $this->getCodes($this->mailFromResult);
-        echo print_r($mailFromCodes, true);
+            $command = sprintf("MAIL FROM:<%s>\r\n", $emailAddress);
+            $this->mailFromResult = $this->sendCommand($socket, $command);
+            $mailFromCodes = $this->getCodes($this->mailFromResult);
 
-        $command = sprintf("RCPT TO:<%s>\r\n", $emailAddress);
-        $this->recipientResult = $this->sendCommand($socket, $command);
-        $recipientCodes = $this->getCodes($this->recipientResult);
-        echo print_r($recipientCodes, true);
+            $command = sprintf("RCPT TO:<%s>\r\n", $emailAddress);
+            $this->recipientResult = $this->sendCommand($socket, $command);
+            $recipientCodes = $this->getCodes($this->recipientResult);
 
-        $isValid = false;
-        if (sizeof($recipientCodes) == 1 && $recipientCodes[0] == self::SMTP_CODE_OKAY) {
-            $isValid = true;
+            $isValid = (sizeof($recipientCodes) == 1 && $recipientCodes[0] == self::SMTP_CODE_OKAY);
+
+            return $isValid;
+        } finally {
+            // Ensure socket is always closed, even if an exception occurs
+            if (is_resource($socket)) {
+                fclose($socket);
+            }
         }
-
-        // Close the socket to prevent resource leak
-        fclose($socket);
-
-        return $isValid;
     }
 }

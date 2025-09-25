@@ -2,6 +2,8 @@
 
 namespace Coco\EmailVerification\DNS\Records;
 
+use Coco\EmailVerification\Exceptions\DnsLookupException;
+
 class MxRecord {
     private string $class;
     private string $host;
@@ -29,14 +31,13 @@ class MxRecord {
 
     /**
      * @return string
+     * @throws DnsLookupException
      */
     public function getTargetIp(): string {
         $targetIp = gethostbyname($this->target);
 
-        if (empty($targetIp)) {
-            echo sprintf(
-                'Cannot find the target IP for the domain %s', $this->target
-            );
+        if (empty($targetIp) || $targetIp === $this->target) {
+            throw new DnsLookupException($this->target, "Cannot resolve target IP");
         }
 
         return $targetIp;
