@@ -208,7 +208,7 @@ The library recognizes standard SMTP response codes:
 ├── composer.lock                         # Composer lock file
 └── src/
     ├── EmailValidator.php                # Main validation class
-    ├── MxLookup.php                     # DNS MX record lookup
+    ├── MxLookup.php                      # DNS MX record lookup
     ├── DNS/
     │   ├── Records/
     │   │   └── MxRecord.php             # MX record data structure
