@@ -6,7 +6,7 @@ class EmailValidator {
     public const SMTP_PORT = 25;
 
     /**
-     * @param $socket
+     * @param resource $socket
      * @param string $command
      * @return array
      */

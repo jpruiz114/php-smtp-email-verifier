@@ -11,9 +11,9 @@ class MxLookup {
     private string $domain;
 
     /**
-     * @param $domain
+     * @param string $domain
      */
-    public function __construct($domain) {
+    public function __construct(string $domain) {
         $this->domain = $domain;
     }
 
@@ -64,7 +64,7 @@ class MxLookup {
             return null;
         }
 
-        usort($mxRecords, function ($item1, $item2) {
+        usort($mxRecords, function (array $item1, array $item2): int {
             return $item1[MxAttributes::ATTRIBUTE_PRI] <=> $item2[MxAttributes::ATTRIBUTE_PRI];
         });
 
