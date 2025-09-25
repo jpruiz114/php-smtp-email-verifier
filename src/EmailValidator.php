@@ -8,6 +8,9 @@ use Coco\EmailVerification\Exceptions\SmtpConnectionException;
 
 class EmailValidator {
     public const SMTP_PORT = 25;
+    public const DEFAULT_TIMEOUT = 10; // Increased default timeout
+    
+    private int $connectionTimeout;
 
     /**
      * @param resource $socket
@@ -37,6 +40,14 @@ class EmailValidator {
     private array $ehloResult;
     private array $mailFromResult;
     private array $recipientResult;
+    
+    /**
+     * EmailValidator constructor
+     * @param int $connectionTimeout Timeout in seconds for SMTP connections
+     */
+    public function __construct(int $connectionTimeout = self::DEFAULT_TIMEOUT) {
+        $this->connectionTimeout = max(5, min(30, $connectionTimeout)); // Between 5-30 seconds
+    }
 
     /**
      * @return array
@@ -128,13 +139,16 @@ class EmailValidator {
         }
 
         /** @var resource|false $socket */
-        $socket = fsockopen($targetIp, self::SMTP_PORT, $error_code, $error_message, 5);
+        $socket = fsockopen($targetIp, self::SMTP_PORT, $error_code, $error_message, $this->connectionTimeout);
 
         if ($socket === false || !empty($error_code)) {
             throw new SmtpConnectionException($targetIp, self::SMTP_PORT, $error_message, $error_code);
         }
 
         try {
+            // Set socket timeout for read operations
+            stream_set_timeout($socket, $this->connectionTimeout);
+            
             $this->connectionResult[] = fgets($socket, 1024);
 
             $command = sprintf("EHLO %s\r\n", $mxLookup->getDomain());
@@ -154,11 +168,32 @@ class EmailValidator {
         } finally {
             // Ensure socket is always closed, even if an exception occurs
             if (is_resource($socket)) {
-                // Send QUIT command to properly close SMTP session per RFC 5321
-                $quitCommand = "QUIT\r\n";
-                $this->sendCommand($socket, $quitCommand);
-                fclose($socket);
+                try {
+                    // Send QUIT command to properly close SMTP session per RFC 5321
+                    $quitCommand = "QUIT\r\n";
+                    $this->sendCommand($socket, $quitCommand);
+                } catch (Throwable $e) {
+                    // Ignore errors during cleanup
+                } finally {
+                    fclose($socket);
+                }
             }
         }
+    }
+    
+    /**
+     * Get the current connection timeout setting
+     * @return int
+     */
+    public function getConnectionTimeout(): int {
+        return $this->connectionTimeout;
+    }
+    
+    /**
+     * Set the connection timeout
+     * @param int $timeout Timeout in seconds (between 5-30)
+     */
+    public function setConnectionTimeout(int $timeout): void {
+        $this->connectionTimeout = max(5, min(30, $timeout));
     }
 }
