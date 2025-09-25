@@ -37,7 +37,7 @@ class MxLookup {
      * @return array
      */
     public function findMxRecords(): array {
-        $dnsRecords = dns_get_record($this->domain, DNS_MX, );
+        $dnsRecords = dns_get_record($this->domain, DNS_MX);
 
         $mxRecords = [];
 
