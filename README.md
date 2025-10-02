@@ -27,7 +27,7 @@ A PHP library for comprehensive email address verification that goes beyond basi
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd email-verification
+cd php-smtp-email-verifier
 ```
 
 2. Install dependencies:
